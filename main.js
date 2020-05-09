@@ -4,6 +4,8 @@ const {
     BrowserWindow
 } = require('electron');
 
+const electron = require('electron');
+
 const ipc = require('electron').ipcMain;
 const path = require('path');
 
@@ -18,7 +20,7 @@ app.on('ready', () => {
     if (adapterSettings.has()) {
         // settings existed
         let settings = adapterSettings.get();
-        if (settings !== null && settings.moniter !== null) {
+        if (settings && settings.moniter) {
             for (let adapter of settings.moniter) {
                 createWidgetWindow(adapter.inteface);
             }
@@ -70,16 +72,21 @@ function createSettingsWindow() {
 
 function createWidgetWindow(adapter) {
     let widgetWindow;
-
+    let screenWidth = electron.screen.getPrimaryDisplay().size.width;
+    let screenHeight = electron.screen.getPrimaryDisplay().size.height;
     var conf = {
-        width: 640,
-        height: 360,
+        x: screenWidth - 132,
+        y: screenHeight - 108,
+        width: 120,
+        height: 58,
         resizable: false,
         maximizable: false,
         show: false,
         webPreferences: {
             nodeIntegration: true
-        }
+        },
+        transparent: true,
+        skipTaskbar: true
     };
 
     // titlebar
@@ -99,6 +106,7 @@ function createWidgetWindow(adapter) {
 
     widgetWindow.on('ready-to-show', () => {
         widgetWindow.show();
+        widgetWindow.webContents.send('init-adapter', adapter);
         ipc.on('app-quitNow', ()=>{
             app.quit();
         });
