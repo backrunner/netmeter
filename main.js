@@ -75,10 +75,10 @@ function createWidgetWindow(adapter) {
     let screenWidth = electron.screen.getPrimaryDisplay().size.width;
     let screenHeight = electron.screen.getPrimaryDisplay().size.height;
     var conf = {
-        x: screenWidth - 132,
-        y: screenHeight - 108,
-        width: 120,
-        height: 58,
+        x: screenWidth - 112,
+        y: screenHeight - 86,
+        width: 88,
+        height: 42,
         resizable: false,
         maximizable: false,
         show: false,
