@@ -22,7 +22,7 @@ const StorageUtil = {
             return await this.getPromise(key);
         } catch (err) {
             console.error(err);
-            return false;
+            return null;
         }
     },
     hasPromise(key) {

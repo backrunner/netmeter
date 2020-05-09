@@ -7,15 +7,31 @@ const {
 const ipc = require('electron').ipcMain;
 const path = require('path');
 
+// utils
+const adapterSettings = require('./utils/AdapterUtil');
+
 let settingsWindow;
 let widgetWindows = [];
 
 app.on('ready', () => {
     // app inited
-    
+    if (adapterSettings.has()) {
+        // settings existed
+        let settings = adapterSettings.get();
+        if (settings !== null && settings.moniter !== null) {
+            for (let adapter of settings.moniter) {
+                createWidgetWindow(adapter.inteface);
+            }
+        } else {
+            // read error, use default value
+            createWidgetWindow('auto');
+        }
+    } else {
+        adapterSettings.init();
+    }
 });
 
-function createMainWindow() {
+function createSettingsWindow() {
     // conf of main window
     var conf = {
         width: 640,
