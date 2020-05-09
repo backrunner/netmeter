@@ -1,0 +1,9 @@
+{
+    "jshint.options": {
+        "esversion": 8
+    },
+    "licenser.author": "BackRunner",
+    "licenser.projectName": "NetMeter",
+    "licenser.license": "MIT",
+    "tslint.enable": false
+}

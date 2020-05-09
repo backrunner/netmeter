@@ -1,0 +1,17 @@
+{
+  "name": "netmeter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "author": "BackRunner",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^8.2.5",
+    "electron-edge-js": "^12.13.0",
+    "electron-json-storage": "^4.1.8",
+    "electron-titlebar": "0.0.3"
+  },
+  "devDependencies": {
+    "gulp": "^4.0.2"
+  }
+}
