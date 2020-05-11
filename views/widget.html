@@ -8,16 +8,50 @@
         <link rel="stylesheet" type="text/css" media="screen" href="static/styles/widget.css">
         <script>
             window.$ = window.jQuery = require("./static/jquery.min.js");
+            const {
+                ipcRenderer
+            } = require('electron');
+            // global vars
+            let adapter;
+            let timer;
         </script>
     </head>
     <body>
         <div class="container-widget">
             <div class="widget-speed widget-downloadspeed">
-                <i class="arrow down icon"></i><span></span>
+                <div class="widget-speed-icon">
+                    <i class="arrow down icon"></i>
+                </div>
+                <div class="widget-speed-text">
+                    <span id="speed-download">&nbsp;</span>
+                </div>
             </div>
             <div class="widget-speed widget-uploadspeed">
-                <i class="arrow up icon"></i><span></span>
+                <div class="widget-speed-icon">
+                    <i class="arrow up icon"></i>
+                </div>
+                <div class="widget-speed-text">
+                    <span id="speed-upload">&nbsp;</span>
+                </div>
             </div>
         </div>
+        <script>
+            ipcRenderer.on('init-adapter', (sender, data) => {
+                adapter = data;
+                timer = setInterval(() => {
+                    ipcRenderer.send('get-speed', adapter);
+                }, 1000);
+            });
+            ipcRenderer.on('update-speed', (sender, data) => {
+                if (data) {
+                    if (data.download) {
+                        $('#speed-download').text(data.download);
+                    }
+                    if (data.upload) {
+                        $('#speed-upload').text(data.upload);
+                    }
+                }
+            });
+        </script>
     </body>
 </html>

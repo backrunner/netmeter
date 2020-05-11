@@ -8,3 +8,7 @@ gulp.task('styles', () => {
         .pipe(cssmin())
         .pipe(gulp.dest('./views/static/styles'));
 });
+
+gulp.task('watch', () => {
+    gulp.watch('./styles/**/*.less',gulp.series('styles'));
+});

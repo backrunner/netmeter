@@ -1,7 +1,7 @@
 const storage = require('./StorageUtil');
 
 const AdapterUtil = {
-    init() {
+    async init() {
         const adapter = {
             moniter: [
                 {
@@ -9,13 +9,13 @@ const AdapterUtil = {
                 }
             ]
         };
-        return storage.set('adapter', adapter);
+        return await storage.set('adapter', adapter);
     },
-    has() {
-        return storage.has('adapter');
+    async has() {
+        return await storage.has('adapter');
     },
-    get() {
-        return storage.get('adapter');
+    async get() {
+        return await storage.get('adapter');
     }
 };
 

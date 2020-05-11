@@ -3,41 +3,22 @@ const path = require('path');
 const DLL_PATH = path.join(__dirname, '../lib/NetMeter.dll').replace(/\\/g, '\\\\');
 const TYPE_NAME = 'NetMeter.NetMeter';
 
-const NetMeterDLL = {
+const NetMeterDLLStatic = {
     getAdapterNames: edge.func({
         assemblyFile: DLL_PATH,
         typeName: TYPE_NAME,
         methodName: 'GetAdapterNames',
     }),
-    init: edge.func({
+    getActiveAdapter: edge.func({
         assemblyFile: DLL_PATH,
         typeName: TYPE_NAME,
-        methodName: 'Init',
-    }),
-    start: edge.func({
-        assemblyFile: DLL_PATH,
-        typeName: TYPE_NAME,
-        methodName: 'Start',
-    }),
-    stop: edge.func({
-        assemblyFile: DLL_PATH,
-        typeName: TYPE_NAME,
-        methodName: 'Stop',
-    }),
-    getDownloadSpeed: edge.func({
-        assemblyFile: DLL_PATH,
-        typeName: TYPE_NAME,
-        methodName: 'GetDownloadSpeed',
-    }),
-    getUploadSpeed: edge.func({
-        assemblyFile: DLL_PATH,
-        typeName: TYPE_NAME,
-        methodName: 'GetUploadSpeed',
+        methodName: 'GetActivatedAdapter',
     }),
     getAdapterNamesPromise() {
         return new Promise((resolve, reject) => {
             this.getAdapterNames(null, (err, res) => {
                 if (err) {
+                    console.error(err);
                     resolve(null);
                     return;
                 }
@@ -46,46 +27,14 @@ const NetMeterDLL = {
                 } catch (e) {
                     resolve(null);
                 }
-             });
-        });
-    },
-    initPromise(name) {
-        return new Promise((resolve, reject) => {
-            this.init(name, (err, res) => {
-                if (err) {
-                    resolve(false);
-                    return;
-                }
-                resolve(true);
             });
         });
     },
-    startPromise() {
+    getActiveAdapterPromise() {
         return new Promise((resolve, reject) => {
-            this.start(null, (err, res) => {
+            this.getActiveAdapter(null, (err, res) => {
                 if (err) {
-                    resolve(false);
-                    return;
-                }
-                resolve(true);
-            });
-        });
-    },
-    stopPromise() {
-        return new Promise((resolve, reject) => {
-            this.stop(null, (err, res) => {
-                if (err) {
-                    resolve(false);
-                    return;
-                }
-                resolve(true);
-            });
-        });
-    },
-    getDownloadSpeedPromise() {
-        return new Promise((resolve, reject) => {
-            this.getDownloadSpeed(null, (err, res) => {
-                if (err) {
+                    console.error(err);
                     resolve(null);
                     return;
                 }
@@ -93,38 +42,128 @@ const NetMeterDLL = {
             });
         });
     },
-    getUploadSpeedPromise() {
-        return new Promise((resolve, reject) => {
-            this.getUploadSpeed(null, (err, res) => {
-                if (err) {
-                    resolve(null);
-                    return;
-                }
-                resolve(res);
-            });
-        });
-    }
 };
 
-const NetMeter = {
+class NetMeterDLL {
+    constructor() {
+        this.init = edge.func({
+            assemblyFile: DLL_PATH,
+            typeName: TYPE_NAME,
+            methodName: 'Init',
+        });
+        this.start = edge.func({
+            assemblyFile: DLL_PATH,
+            typeName: TYPE_NAME,
+            methodName: 'Start',
+        });
+        this.stop = edge.func({
+            assemblyFile: DLL_PATH,
+            typeName: TYPE_NAME,
+            methodName: 'Stop',
+        });
+        this.getDownloadSpeed = edge.func({
+            assemblyFile: DLL_PATH,
+            typeName: TYPE_NAME,
+            methodName: 'GetDownloadSpeed',
+        });
+        this.getUploadSpeed = edge.func({
+            assemblyFile: DLL_PATH,
+            typeName: TYPE_NAME,
+            methodName: 'GetUploadSpeed',
+        });
+        // Promise
+        this.initPromise = (name) => {
+            return new Promise((resolve, reject) => {
+                this.init(name, (err, res) => {
+                    if (err) {
+                        console.error(err);
+                        resolve(false);
+                        return;
+                    }
+                    resolve(true);
+                });
+            });
+        };
+        this.startPromise = (name) => {
+            return new Promise((resolve, reject) => {
+                this.start(name, (err, res) => {
+                    if (err) {
+                        console.error(err);
+                        resolve(false);
+                        return;
+                    }
+                    resolve(true);
+                });
+            });
+        };
+        this.stopPromise = name => {
+            return new Promise((resolve, reject) => {
+                this.stop(name, (err, res) => {
+                    if (err) {
+                        console.error(err);
+                        resolve(false);
+                        return;
+                    }
+                    resolve(true);
+                });
+            });
+        };
+        this.getDownloadSpeedPromise = name => {
+            return new Promise((resolve, reject) => {
+                this.getDownloadSpeed(name, (err, res) => {
+                    if (err) {
+                        console.error(err);
+                        resolve(null);
+                        return;
+                    }
+                    resolve(res);
+                });
+            });
+        };
+        this.getUploadSpeedPromise = name => {
+            return new Promise((resolve, reject) => {
+                this.getUploadSpeed(name, (err, res) => {
+                    if (err) {
+                        console.error(err);
+                        resolve(null);
+                        return;
+                    }
+                    resolve(res);
+                });
+            });
+        };
+    }
+}
+
+class NetMeter {
+    constructor() {
+        this.DLL = new NetMeterDLL();
+        this.init = async name => {
+            return await this.DLL.initPromise(name);
+        },
+        this.start = async name => {
+            return await this.DLL.startPromise(name);
+        },
+        this.stop = async name => {
+            return await this.DLL.stopPromise(name);
+        },
+        this.getDownloadSpeed = async name => {
+            return await this.DLL.getDownloadSpeedPromise(name);
+        },
+        this.getUploadSpeed = async name => {
+            return await this.DLL.getUploadSpeedPromise(name);
+        }
+    }
+}
+
+const NetMeterStatic = {
     async getAdapterNames() {
-        return await NetMeterDLL.getAdapterNamesPromise();
+        return await NetMeterDLLStatic.getAdapterNamesPromise();
     },
-    async init(name) {
-        return await NetMeterDLL.initPromise(name);
-    },
-    async start() {
-        return await NetMeterDLL.startPromise();
-    },
-    async stop() {
-        return await NetMeterDLL.stopPromise();
-    },
-    async getDownloadSpeed() {
-        return await NetMeterDLL.getDownloadSpeedPromise();
-    },
-    async getUploadSpeed() {
-        return await NetMeterDLL.getUploadSpeedPromise();
+    async getActiveAdapter() {
+        return await NetMeterDLLStatic.getActiveAdapterPromise();
     }
 };
 
 module.exports = NetMeter;
+module.exports.static = NetMeterStatic;

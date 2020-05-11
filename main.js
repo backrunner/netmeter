@@ -1,7 +1,8 @@
 // requirements
 const {
     app,
-    BrowserWindow
+    BrowserWindow,
+    dialog
 } = require('electron');
 
 const electron = require('electron');
@@ -11,26 +12,60 @@ const path = require('path');
 
 // utils
 const adapterSettings = require('./utils/AdapterUtil');
+const NetMeter = require('./app/NetMeter');
+const NetMeterStatic = require('./app/NetMeter').static;
 
+// windows
 let settingsWindow;
-let widgetWindows = [];
+let widgetWindows = {};
 
-app.on('ready', () => {
+// global vars
+let meters = {};
+let adapters;
+let currentAutoAdapter;
+
+app.on('ready', async () => {
     // app inited
-    if (adapterSettings.has()) {
+    if (await adapterSettings.has()) {
         // settings existed
-        let settings = adapterSettings.get();
+        let settings = await adapterSettings.get();
+        adapters = await NetMeterStatic.getAdapterNames();
+        if (!adapters) {
+            dialog.showMessageBoxSync({
+                type: 'error',
+                message: '程序无法初始化'
+            });
+            process.exit();
+        }
         if (settings && settings.moniter) {
             for (let adapter of settings.moniter) {
-                createWidgetWindow(adapter.inteface);
+                if (adapter.interface === 'auto' || adapters.includes(adapter.interface)) {
+                    createWidgetWindow(adapter.interface);
+                }
             }
         } else {
             // read error, use default value
             createWidgetWindow('auto');
         }
     } else {
-        adapterSettings.init();
+        await adapterSettings.init();
+        createWidgetWindow('auto');
     }
+    // set up listener
+    ipc.on('get-speed', async (sender, adapter) => {
+        if (adapter === 'auto') {
+            let downloadSpeed = await meters.auto.getDownloadSpeed(currentAutoAdapter);
+            let uploadSpeed = await meters.auto.getUploadSpeed(currentAutoAdapter);
+            widgetWindows.auto.webContents.send('update-speed', {
+                download: downloadSpeed,
+                upload: uploadSpeed
+            });
+        } else if (adapters.includes(adapter)) {
+            
+        } else {
+            // adapter isn't existed
+        }
+    });
 });
 
 function createSettingsWindow() {
@@ -54,12 +89,12 @@ function createSettingsWindow() {
 
     settingsWindow = new BrowserWindow(conf);
 
-    //load index page
+    // load index page
 
     let viewpath = path.resolve(__dirname, './views/settings.html');
     settingsWindow.loadFile(viewpath);
 
-    //event listener
+    // event listener
 
     settingsWindow.on('ready-to-show', () => {
         settingsWindow.show();
@@ -70,14 +105,14 @@ function createSettingsWindow() {
     });
 }
 
-function createWidgetWindow(adapter) {
+async function createWidgetWindow(adapter) {
     let widgetWindow;
     let screenWidth = electron.screen.getPrimaryDisplay().size.width;
     let screenHeight = electron.screen.getPrimaryDisplay().size.height;
     var conf = {
-        x: screenWidth - 112,
-        y: screenHeight - 86,
-        width: 88,
+        x: screenWidth - 118,
+        y: screenHeight - 92,
+        width: 104,
         height: 42,
         resizable: false,
         maximizable: false,
@@ -89,7 +124,7 @@ function createWidgetWindow(adapter) {
         skipTaskbar: true
     };
 
-    // titlebar
+    // hidden titlebar
     if (process.platform == 'darwin')
         conf.titleBarStyle = 'hiddenInset';
     else
@@ -97,12 +132,15 @@ function createWidgetWindow(adapter) {
 
     widgetWindow = new BrowserWindow(conf);
 
-    //load index page
+    // set always on top
+    widgetWindow.setAlwaysOnTop(true, 'screen-saver', 0);
+
+    // load index page
 
     let viewpath = path.resolve(__dirname, './views/widget.html');
     widgetWindow.loadFile(viewpath);
 
-    //event listener
+    // event listener
 
     widgetWindow.on('ready-to-show', () => {
         widgetWindow.show();
@@ -112,5 +150,29 @@ function createWidgetWindow(adapter) {
         });
     });
 
-    widgetWindows.push(widgetWindow);
+    widgetWindows[adapter] = widgetWindow;
+    meters[adapter] = new NetMeter();
+    if (adapter === 'auto') {
+        let activeAdapter = await NetMeterStatic.getActiveAdapter();
+        for (let adapter of adapters) {
+            // find active adapter in adapters
+            if (activeAdapter.includes(adapter.replace(/\[R\]/g, '(R)'))) {
+                currentAutoAdapter = adapter;
+                break;
+            }
+        }
+        if (currentAutoAdapter) {
+            if (await meters[adapter].init(currentAutoAdapter)) {
+                await meters[adapter].start(currentAutoAdapter);
+            }
+        } else {
+            // cannot find active adapter in adapters
+        }
+    } else {
+        if (await meters[adapter].init(adapter)){
+            await meters[adapter].start(adapter);
+        } else {
+            // init error
+        }
+    }
 }
