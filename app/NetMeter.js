@@ -51,6 +51,11 @@ class NetMeterDLL {
             typeName: TYPE_NAME,
             methodName: 'Init',
         });
+        this.remove = edge.func({
+            assemblyFile: DLL_PATH,
+            typeName: TYPE_NAME,
+            methodName: 'Remove',
+        });
         this.start = edge.func({
             assemblyFile: DLL_PATH,
             typeName: TYPE_NAME,
@@ -72,7 +77,7 @@ class NetMeterDLL {
             methodName: 'GetUploadSpeed',
         });
         // Promise
-        this.initPromise = (name) => {
+        this.initPromise = name => {
             return new Promise((resolve, reject) => {
                 this.init(name, (err, res) => {
                     if (err) {
@@ -84,7 +89,19 @@ class NetMeterDLL {
                 });
             });
         };
-        this.startPromise = (name) => {
+        this.removePromise = name => {
+            return new Promise((resolve, reject) => {
+                this.remove(name, (err, res) => {
+                    if (err) {
+                        console.error(err);
+                        resolve(false);
+                        return;
+                    }
+                    resolve(true);
+                });
+            });
+        };
+        this.startPromise = name => {
             return new Promise((resolve, reject) => {
                 this.start(name, (err, res) => {
                     if (err) {
@@ -140,19 +157,22 @@ class NetMeter {
         this.DLL = new NetMeterDLL();
         this.init = async name => {
             return await this.DLL.initPromise(name);
-        },
+        };
+        this.remove = async name => {
+            return await this.DLL.removePromise(name);
+        }
         this.start = async name => {
             return await this.DLL.startPromise(name);
-        },
+        };
         this.stop = async name => {
             return await this.DLL.stopPromise(name);
-        },
+        };
         this.getDownloadSpeed = async name => {
             return await this.DLL.getDownloadSpeedPromise(name);
-        },
+        };
         this.getUploadSpeed = async name => {
             return await this.DLL.getUploadSpeedPromise(name);
-        }
+        };
     }
 }
 
