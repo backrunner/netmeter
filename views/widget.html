@@ -9,8 +9,11 @@
         <script>
             window.$ = window.jQuery = require("./static/jquery.min.js");
             const {
-                ipcRenderer
+                ipcRenderer,
+                Menu,
+                MenuItem
             } = require('electron');
+            const remote = require('electron').remote;
             // global vars
             let adapter;
             let timer;

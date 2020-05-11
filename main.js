@@ -2,6 +2,9 @@
 const {
     app,
     BrowserWindow,
+    Tray,
+    Menu,
+    MenuItem,
     dialog
 } = require('electron');
 
@@ -18,6 +21,9 @@ const NetMeterStatic = require('./app/NetMeter').static;
 // windows
 let settingsWindow;
 let widgetWindows = {};
+
+// tray
+let tray;
 
 // global vars
 let meters = {};
@@ -51,6 +57,8 @@ app.on('ready', async () => {
         await adapterSettings.init();
         createWidgetWindow('auto');
     }
+    // create tray
+    createTray();
     // set up listener
     ipc.on('get-speed', async (sender, adapter) => {
         if (adapter === 'auto') {
@@ -77,9 +85,57 @@ app.on('ready', async () => {
     });
 });
 
+function createTray() {
+    let trayIco = path.resolve(__dirname, './assets/tray.ico');
+    tray = new Tray(trayIco);
+    tray.setToolTip('NetMeter');
+    tray.setContextMenu(buildTrayMenu('penetrate'));
+}
+
+function buildTrayMenu(mode) {
+    let menu = Menu.buildFromTemplate([{
+        label: '网卡设置',
+        click: () => {
+
+        }
+    },
+    {
+        label: '退出',
+        click: () => {
+            app.quit();
+        }
+    }]);
+    if (mode === 'penetrate') {
+        menu.insert(0, new MenuItem({
+            label: '鼠标穿透',
+            click: () => {
+                for (let key in widgetWindows) {
+                    if (widgetWindows[key]) {
+                        widgetWindows[key].setIgnoreMouseEvents(true);
+                    }
+                }
+                tray.setContextMenu(buildTrayMenu('cancel-penetrate'));
+            }
+        }));
+    } else if (mode === 'cancel-penetrate') {
+        menu.insert(0, new MenuItem({
+            label: '解除鼠标穿透',
+            click: () => {
+                for (let key in widgetWindows) {
+                    if (widgetWindows[key]) {
+                        widgetWindows[key].setIgnoreMouseEvents(false);
+                    }
+                }
+                tray.setContextMenu(buildTrayMenu('penetrate'));
+            }
+        }));
+    }
+    return menu;
+}
+
 function checkQuit() {
-    for (let i = 0; i < widgetWindows.length; i++) {
-        if (widgetWindows[i]) {
+    for (let key in widgetWindows) {
+        if (widgetWindows[key]) {
             return;
         }
     }
@@ -95,9 +151,11 @@ async function createWidgetWindow(adapter) {
         y: screenHeight - 92,
         width: 104,
         height: 42,
-        resizable: false,
+        resizable: true,
+        minimizable: false,
         maximizable: false,
         show: false,
+        frame: false,
         webPreferences: {
             nodeIntegration: true
         },
