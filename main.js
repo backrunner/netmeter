@@ -35,7 +35,7 @@ app.on('ready', async () => {
                 type: 'error',
                 message: '程序无法初始化'
             });
-            process.exit();
+            app.quit();
         }
         if (settings && settings.moniter) {
             for (let adapter of settings.moniter) {
@@ -60,49 +60,30 @@ app.on('ready', async () => {
                 download: downloadSpeed,
                 upload: uploadSpeed
             });
-        } else if (adapters.includes(adapter)) {
-            
+        } else if (adapters.includes(adapter) && meters[adapter] && widgetWindows[adapter]) {
+            let downloadSpeed = await meters[adapter].getDownloadSpeed(adapter);
+            let uploadSpeed = await meters[adapter].getUploadSpeed(adapter);
+            widgetWindows[adapter].webContents.send('update-speed', {
+                download: downloadSpeed,
+                upload: uploadSpeed
+            });
         } else {
             // adapter isn't existed
+            if (widgetWindows[adapter]) {
+                widgetWindows[adapter].close();
+                widgetWindows[adapter] = null;
+            }
         }
     });
 });
 
-function createSettingsWindow() {
-    // conf of main window
-    var conf = {
-        width: 640,
-        height: 360,
-        resizable: false,
-        maximizable: false,
-        show: false,
-        webPreferences: {
-            nodeIntegration: true
+function checkQuit() {
+    for (let i = 0; i < widgetWindows.length; i++) {
+        if (widgetWindows[i]) {
+            return;
         }
-    };
-
-    // titlebar
-    if (process.platform == 'darwin')
-        conf.titleBarStyle = 'hiddenInset';
-    else
-        conf.frame = false;
-
-    settingsWindow = new BrowserWindow(conf);
-
-    // load index page
-
-    let viewpath = path.resolve(__dirname, './views/settings.html');
-    settingsWindow.loadFile(viewpath);
-
-    // event listener
-
-    settingsWindow.on('ready-to-show', () => {
-        settingsWindow.show();
-    });
-
-    settingsWindow.on('closed', () => {
-        app.quit();
-    });
+    }
+    app.quit();
 }
 
 async function createWidgetWindow(adapter) {
@@ -145,9 +126,11 @@ async function createWidgetWindow(adapter) {
     widgetWindow.on('ready-to-show', () => {
         widgetWindow.show();
         widgetWindow.webContents.send('init-adapter', adapter);
-        ipc.on('app-quitNow', ()=>{
-            app.quit();
-        });
+    });
+
+    widgetWindow.on('closed', () => {
+        widgetWindow[adapter] = null;
+        checkQuit();
     });
 
     widgetWindows[adapter] = widgetWindow;
@@ -167,12 +150,63 @@ async function createWidgetWindow(adapter) {
             }
         } else {
             // cannot find active adapter in adapters
+            dialog.showMessageBoxSync({
+                type: 'error',
+                message: `网卡 [${adapter}] 的流量计无法初始化`
+            });
+            widgetWindow.close();
+            widgetWindow = null;
+            checkQuit();
         }
     } else {
         if (await meters[adapter].init(adapter)){
             await meters[adapter].start(adapter);
         } else {
             // init error
+            dialog.showMessageBoxSync({
+                type: 'error',
+                message: `网卡 [${adapter}] 的流量计无法初始化`
+            });
+            widgetWindow.close();
+            widgetWindow = null;
+            checkQuit();
         }
     }
+}
+
+function createSettingsWindow() {
+    // conf of main window
+    var conf = {
+        width: 640,
+        height: 360,
+        resizable: false,
+        maximizable: false,
+        show: false,
+        webPreferences: {
+            nodeIntegration: true
+        }
+    };
+
+    // titlebar
+    if (process.platform == 'darwin')
+        conf.titleBarStyle = 'hiddenInset';
+    else
+        conf.frame = false;
+
+    settingsWindow = new BrowserWindow(conf);
+
+    // load index page
+
+    let viewpath = path.resolve(__dirname, './views/settings.html');
+    settingsWindow.loadFile(viewpath);
+
+    // event listener
+
+    settingsWindow.on('ready-to-show', () => {
+        settingsWindow.show();
+    });
+
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
+    });
 }
